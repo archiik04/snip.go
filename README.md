@@ -15,12 +15,12 @@ A fast, minimal URL shortener built with **Go + Gin + Redis** on the backend and
 
 ## Features
 
-- 🔗 Shorten any URL instantly
-- ✏️ Custom aliases (e.g. `snip-go.onrender.com/my-link`)
-- ⏳ Optional expiry (TTL in days)
-- 📊 Click tracking & stats
-- 📋 Copy to clipboard
-- 🕘 Recent links history (saved in localStorage)
+-  Shorten any URL instantly
+-  Custom aliases (e.g. `snip-go.onrender.com/my-link`)
+-  Optional expiry (TTL in days)
+-  Click tracking & stats
+-  Copy to clipboard
+-  Recent links history (saved in localStorage)
 
 ## Project Structure
 
