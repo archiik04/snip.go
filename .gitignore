@@ -1,0 +1,22 @@
+# Go
+backend/bin/
+backend/*.exe
+backend/tmp/
+
+# Env files - never commit these!
+backend/.env
+.env
+
+# Go build cache
+*.test
+*.out
+
+# VS Code
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node (if you add tooling later)
+node_modules/

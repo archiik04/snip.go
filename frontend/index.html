@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>snip.go — URL Shortener</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;700;800&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0a0a;
+    --surface: #111111;
+    --surface2: #191919;
+    --border: rgba(255,255,255,0.08);
+    --border2: rgba(255,255,255,0.14);
+    --text: #f0ede8;
+    --muted: #888882;
+    --accent: #c8f060;
+    --accent2: #a8d840;
+    --danger: #ff5e5e;
+    --mono: 'DM Mono', monospace;
+    --display: 'Syne', sans-serif;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    min-height: 100vh;
+    padding: 0;
+  }
+
+  .grain {
+    position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    background-size: 180px;
+    opacity: 0.4;
+  }
+
+  .wrap {
+    position: relative; z-index: 1;
+    max-width: 640px; margin: 0 auto;
+    padding: 48px 24px 80px;
+  }
+
+  .header { margin-bottom: 48px; }
+
+  .logo {
+    font-family: var(--display);
+    font-size: 13px; font-weight: 700;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 32px;
+    display: flex; align-items: center; gap: 8px;
+  }
+
+  .logo-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--accent);
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.7); }
+  }
+
+  h1 {
+    font-family: var(--display);
+    font-size: 48px; font-weight: 800; line-height: 1;
+    letter-spacing: -0.03em;
+    margin-bottom: 12px;
+  }
+
+  h1 span { color: var(--accent); }
+
+  .subtitle {
+    font-size: 13px; color: var(--muted);
+    letter-spacing: 0.02em;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 16px;
+    animation: fadeUp 0.4s ease both;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .field-label {
+    font-size: 11px; font-weight: 500;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+    display: block;
+  }
+
+  .input-row {
+    display: flex; gap: 8px; align-items: stretch;
+  }
+
+  input[type="text"], input[type="url"], input[type="number"] {
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: 10px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 14px;
+    padding: 12px 16px;
+    outline: none;
+    transition: border-color 0.15s;
+    width: 100%;
+  }
+
+  input:focus { border-color: var(--accent); }
+  input::placeholder { color: var(--muted); }
+
+  .btn {
+    background: var(--accent);
+    color: #0a0a0a;
+    border: none;
+    border-radius: 10px;
+    font-family: var(--display);
+    font-size: 13px; font-weight: 700;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    padding: 12px 24px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.15s, transform 0.1s;
+    flex-shrink: 0;
+  }
+
+  .btn:hover { background: var(--accent2); }
+  .btn:active { transform: scale(0.97); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--border2);
+    font-size: 12px; padding: 8px 14px;
+  }
+
+  .btn-ghost:hover { color: var(--text); border-color: var(--border2); background: var(--surface2); }
+
+  .options-row {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+    margin-top: 16px;
+  }
+
+  .toggle-row {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    cursor: pointer;
+  }
+
+  .toggle-label { font-size: 13px; color: var(--muted); }
+
+  .toggle {
+    width: 36px; height: 20px;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: 99px;
+    position: relative;
+    transition: background 0.2s;
+    flex-shrink: 0;
+  }
+
+  .toggle.on { background: var(--accent); border-color: var(--accent); }
+
+  .toggle::after {
+    content: '';
+    position: absolute;
+    top: 2px; left: 2px;
+    width: 14px; height: 14px;
+    background: var(--muted);
+    border-radius: 50%;
+    transition: transform 0.2s, background 0.2s;
+  }
+
+  .toggle.on::after { transform: translateX(16px); background: #0a0a0a; }
+
+  .result-card {
+    background: var(--surface);
+    border: 1px solid var(--accent);
+    border-radius: 16px;
+    padding: 20px 24px;
+    margin-bottom: 16px;
+    animation: fadeUp 0.35s ease both;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .result-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    opacity: 0.5;
+  }
+
+  .result-label {
+    font-size: 11px; color: var(--muted);
+    letter-spacing: 0.1em; text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .result-url {
+    font-size: 22px; font-family: var(--display); font-weight: 700;
+    color: var(--accent);
+    letter-spacing: -0.01em;
+    word-break: break-all;
+    margin-bottom: 12px;
+  }
+
+  .result-meta {
+    font-size: 12px; color: var(--muted);
+    display: flex; align-items: center; gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .result-actions {
+    display: flex; gap: 8px; margin-top: 16px;
+  }
+
+  .history-section { margin-top: 8px; }
+
+  .history-title {
+    font-size: 11px; color: var(--muted);
+    letter-spacing: 0.12em; text-transform: uppercase;
+    margin-bottom: 12px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+
+  .history-item {
+    display: flex; align-items: center;
+    padding: 12px 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 8px;
+    gap: 12px;
+    transition: border-color 0.15s;
+    animation: fadeUp 0.3s ease both;
+  }
+
+  .history-item:hover { border-color: var(--border2); }
+
+  .history-code {
+    font-size: 14px; font-weight: 500; color: var(--accent);
+    min-width: 80px;
+  }
+
+  .history-orig {
+    font-size: 12px; color: var(--muted);
+    flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+
+  .badge {
+    font-size: 10px; font-family: var(--display); font-weight: 700;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    padding: 3px 8px; border-radius: 6px;
+  }
+
+  .badge-ttl { background: rgba(200,240,96,0.12); color: var(--accent); }
+
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    background: var(--accent); color: #0a0a0a;
+    font-family: var(--display); font-size: 13px; font-weight: 700;
+    padding: 12px 20px; border-radius: 10px;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.2s, transform 0.2s;
+    z-index: 100; white-space: nowrap;
+  }
+
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(-4px); }
+
+  .error-msg {
+    font-size: 12px; color: var(--danger);
+    margin-top: 8px; padding-left: 4px;
+    display: none;
+  }
+
+  .error-msg.show { display: block; }
+
+  .divider {
+    height: 1px; background: var(--border);
+    margin: 24px 0;
+  }
+
+  .stat-row {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+    margin-top: 12px;
+  }
+
+  .stat-box {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+    text-align: center;
+  }
+
+  .stat-num {
+    font-family: var(--display); font-size: 22px; font-weight: 800;
+    color: var(--accent);
+  }
+
+  .stat-lbl {
+    font-size: 10px; color: var(--muted);
+    letter-spacing: 0.1em; text-transform: uppercase;
+    margin-top: 2px;
+  }
+</style>
+</head>
+<body>
+<div class="grain"></div>
+<div class="wrap">
+
+  <div class="header">
+    <div class="logo"><div class="logo-dot"></div>snip.go</div>
+    <h1>Make URLs<br><span>shorter.</span></h1>
+  </div>
+
+  <div class="card" id="main-card">
+    <label class="field-label" for="url-input">Long URL</label>
+    <div class="input-row">
+      <input type="url" id="url-input" placeholder="https://your-very-long-url.com/goes/here" />
+      <button class="btn" onclick="shortenURL()" id="shorten-btn">Snip →</button>
+    </div>
+    <div class="error-msg" id="url-error">Please enter a valid URL.</div>
+
+    <div class="toggle-row" onclick="toggleOptions()">
+      <span class="toggle-label">Advanced options</span>
+      <div class="toggle" id="opt-toggle"></div>
+    </div>
+
+    <div id="options-panel" style="display:none; margin-top:16px;">
+      <div class="options-row">
+        <div>
+          <label class="field-label" for="custom-code">Custom alias</label>
+          <input type="text" id="custom-code" placeholder="my-link" />
+        </div>
+        <div>
+          <label class="field-label" for="ttl-days">Expires in (days)</label>
+          <input type="number" id="ttl-days" placeholder="Never" min="1" max="365" />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="result-area"></div>
+
+  <div class="history-section" id="history-section" style="display:none">
+    <div class="divider"></div>
+    <div class="history-title">
+      <span>Recent links</span>
+      <button class="btn btn-ghost" onclick="clearHistory()">Clear</button>
+    </div>
+    <div id="history-list"></div>
+    <div class="stat-row" id="stat-row">
+      <div class="stat-box"><div class="stat-num" id="s-total">0</div><div class="stat-lbl">Links</div></div>
+      <div class="stat-box"><div class="stat-num" id="s-clicks">0</div><div class="stat-lbl">Total clicks</div></div>
+      <div class="stat-box"><div class="stat-num" id="s-expiring">0</div><div class="stat-lbl">Expiring</div></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const BASE = 'http://localhost:8080';
+  let history = JSON.parse(localStorage.getItem('snip_history') || '[]');
+  let optOpen = false;
+
+  function toggleOptions() {
+    optOpen = !optOpen;
+    document.getElementById('opt-toggle').classList.toggle('on', optOpen);
+    document.getElementById('options-panel').style.display = optOpen ? 'block' : 'none';
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2200);
+  }
+
+  function isValidURL(str) {
+    try { new URL(str); return true; } catch { return false; }
+  }
+
+  async function shortenURL() {
+    const urlEl = document.getElementById('url-input');
+    const errEl = document.getElementById('url-error');
+    const btn = document.getElementById('shorten-btn');
+    const url = urlEl.value.trim();
+    const customCode = document.getElementById('custom-code').value.trim();
+    const ttl = parseInt(document.getElementById('ttl-days').value) || 0;
+
+    errEl.classList.remove('show');
+    if (!isValidURL(url)) { errEl.classList.add('show'); return; }
+
+    btn.disabled = true;
+    btn.textContent = '...';
+
+    const body = { url };
+    if (customCode) body.custom_code = customCode;
+    if (ttl > 0) body.ttl_days = ttl;
+
+    try {
+      const res = await fetch(`${BASE}/api/shorten`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        showToast('Error: ' + (err.error || 'Something went wrong'));
+        return;
+      }
+
+      const data = await res.json();
+      renderResult(data);
+
+      const item = { code: data.code, short: data.short_url, original: data.original_url, ttl: ttl, clicks: 0, ts: Date.now() };
+      history.unshift(item);
+      if (history.length > 20) history = history.slice(0, 20);
+      localStorage.setItem('snip_history', JSON.stringify(history));
+      renderHistory();
+
+      urlEl.value = '';
+      document.getElementById('custom-code').value = '';
+      document.getElementById('ttl-days').value = '';
+    } catch (e) {
+      showToast('Cannot reach server. Is it running?');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Snip →';
+    }
+  }
+
+  function renderResult(data) {
+    const area = document.getElementById('result-area');
+    const ttlBadge = data.expires_in > 0 ? `<span class="badge badge-ttl">expires in ${data.expires_in}d</span>` : '';
+    area.innerHTML = `
+      <div class="result-card">
+        <div class="result-label">Your short URL</div>
+        <div class="result-url">${data.short_url}</div>
+        <div class="result-meta">
+          <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:320px">${data.original_url}</span>
+          ${ttlBadge}
+        </div>
+        <div class="result-actions">
+          <button class="btn" onclick="copyURL('${data.short_url}')">Copy link</button>
+          <button class="btn btn-ghost" onclick="fetchStats('${data.code}')">Stats</button>
+          <button class="btn btn-ghost" onclick="window.open('${data.short_url}', '_blank')">Open ↗</button>
+        </div>
+        <div id="stats-${data.code}" style="display:none;margin-top:16px;"></div>
+      </div>
+    `;
+  }
+
+  async function fetchStats(code) {
+    const el = document.getElementById('stats-' + code);
+    if (el.style.display === 'block') { el.style.display = 'none'; return; }
+    try {
+      const res = await fetch(`${BASE}/api/stats/${code}`);
+      if (!res.ok) { showToast('Stats not found'); return; }
+      const d = await res.json();
+      el.innerHTML = `
+        <div style="border-top:1px solid var(--border);padding-top:12px;display:flex;gap:20px;">
+          <div>
+            <div style="font-size:24px;font-family:var(--display);font-weight:800;color:var(--accent)">${d.clicks}</div>
+            <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em">Clicks</div>
+          </div>
+          <div style="flex:1;font-size:12px;color:var(--muted);align-self:flex-end;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.original_url}</div>
+        </div>`;
+      el.style.display = 'block';
+    } catch {
+      showToast('Cannot reach server');
+    }
+  }
+
+  function copyURL(url) {
+    navigator.clipboard.writeText(url).then(() => showToast('Copied to clipboard!'));
+  }
+
+  function renderHistory() {
+    const list = document.getElementById('history-list');
+    const section = document.getElementById('history-section');
+    if (!history.length) { section.style.display = 'none'; return; }
+    section.style.display = 'block';
+    list.innerHTML = history.slice(0, 6).map((h, i) => `
+      <div class="history-item" style="animation-delay:${i * 0.04}s">
+        <div class="history-code">${h.code}</div>
+        <div class="history-orig" title="${h.original}">${h.original}</div>
+        ${h.ttl > 0 ? `<span class="badge badge-ttl">${h.ttl}d</span>` : ''}
+        <button class="btn btn-ghost" style="padding:6px 10px;font-size:11px" onclick="copyURL('${h.short}')">Copy</button>
+      </div>
+    `).join('');
+    document.getElementById('s-total').textContent = history.length;
+    document.getElementById('s-clicks').textContent = history.reduce((a, h) => a + h.clicks, 0);
+    document.getElementById('s-expiring').textContent = history.filter(h => h.ttl > 0).length;
+  }
+
+  function clearHistory() {
+    history = [];
+    localStorage.setItem('snip_history', '[]');
+    document.getElementById('history-section').style.display = 'none';
+    document.getElementById('result-area').innerHTML = '';
+  }
+
+  document.getElementById('url-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') shortenURL();
+  });
+
+  renderHistory();
+</script>
+</body>
+</html>
