@@ -1,378 +1,612 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>snip.go — URL Shortener</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,800;1,400&family=JetBrains+Mono:wght@400;500&display=swap');
 
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 
-  :root {
-    --bg: #0a0a0a;
-    --surface: #111111;
-    --surface2: #191919;
-    --border: rgba(255,255,255,0.08);
-    --border2: rgba(255,255,255,0.14);
-    --text: #f0ede8;
-    --muted: #888882;
-    --accent: #c8f060;
-    --accent2: #a8d840;
-    --danger: #ff5e5e;
-    --mono: 'DM Mono', monospace;
-    --display: 'Syne', sans-serif;
-  }
+:root{
+  --bg:#F8F5EF;
+  --surface:#FFFFFF;
+  --surface2:#F3F0E9;
+  --border:#E5E0D5;
+  --border-hover:#CEC8BB;
+  --text:#1C1917;
+  --muted:#8A857C;
+  --accent:#FF4500;
+  --accent-h:#E03C00;
+  --accent-bg:#FFF4F0;
+  --accent-bd:#FFD0C0;
+  --green:#15803D;
+  --green-bg:#F0FDF4;
+  --green-bd:#BBF7D0;
+  --danger:#DC2626;
+  --sans:'Plus Jakarta Sans',system-ui,sans-serif;
+  --mono:'JetBrains Mono','Fira Code',monospace;
+  --r:12px;
+  --r-lg:18px;
+  --sh:0 1px 2px rgba(0,0,0,0.05),0 4px 16px rgba(0,0,0,0.04);
+  --sh-card:0 2px 8px rgba(0,0,0,0.06),0 12px 40px rgba(0,0,0,0.05);
+}
 
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--mono);
-    min-height: 100vh;
-    padding: 0;
-  }
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--sans);
+  min-height:100vh;
+  -webkit-font-smoothing:antialiased;
+}
 
-  .grain {
-    position: fixed; inset: 0; pointer-events: none; z-index: 0;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
-    background-size: 180px;
-    opacity: 0.4;
-  }
+.noise{
+  position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+  background-size:160px;
+  opacity:0.5;
+}
 
-  .wrap {
-    position: relative; z-index: 1;
-    max-width: 640px; margin: 0 auto;
-    padding: 48px 24px 80px;
-  }
+.page{
+  position:relative;z-index:1;
+  max-width:596px;margin:0 auto;
+  padding:36px 24px 80px;
+}
 
-  .header { margin-bottom: 48px; }
+/* ── Nav ── */
+nav{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:52px;
+  padding-bottom:20px;
+  border-bottom:1.5px solid var(--border);
+}
 
-  .logo {
-    font-family: var(--display);
-    font-size: 13px; font-weight: 700;
-    letter-spacing: 0.18em; text-transform: uppercase;
-    color: var(--accent);
-    margin-bottom: 32px;
-    display: flex; align-items: center; gap: 8px;
-  }
+.logo{
+  display:flex;align-items:center;gap:9px;
+  font-size:15px;font-weight:800;letter-spacing:-0.03em;
+  color:var(--text);text-decoration:none;
+}
 
-  .logo-dot {
-    width: 6px; height: 6px; border-radius: 50%;
-    background: var(--accent);
-    animation: pulse 2s ease-in-out infinite;
-  }
+.logo-mark{
+  width:30px;height:30px;
+  background:var(--accent);
+  border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  color:#fff;font-size:15px;line-height:1;
+  transition:transform 0.15s;
+}
 
-  @keyframes pulse {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.4; transform: scale(0.7); }
-  }
+.logo:hover .logo-mark{transform:rotate(-12deg);}
 
-  h1 {
-    font-family: var(--display);
-    font-size: 48px; font-weight: 800; line-height: 1;
-    letter-spacing: -0.03em;
-    margin-bottom: 12px;
-  }
+.nav-right{
+  display:flex;align-items:center;gap:10px;
+}
 
-  h1 span { color: var(--accent); }
+.pill{
+  font-size:11px;font-weight:600;letter-spacing:0.05em;
+  text-transform:uppercase;
+  background:var(--surface2);color:var(--muted);
+  border:1.5px solid var(--border);
+  padding:4px 10px;border-radius:99px;
+}
 
-  .subtitle {
-    font-size: 13px; color: var(--muted);
-    letter-spacing: 0.02em;
-  }
+/* ── Hero ── */
+.hero{margin-bottom:36px;}
 
-  .card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 24px;
-    margin-bottom: 16px;
-    animation: fadeUp 0.4s ease both;
-  }
+h1{
+  font-size:54px;font-weight:800;
+  line-height:1.04;letter-spacing:-0.045em;
+  margin-bottom:12px;
+  animation:up 0.5s cubic-bezier(0.22,1,0.36,1) both;
+}
 
-  @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(12px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
+h1 em{
+  font-style:normal;
+  color:var(--accent);
+  position:relative;
+  display:inline-block;
+}
 
-  .field-label {
-    font-size: 11px; font-weight: 500;
-    letter-spacing: 0.12em; text-transform: uppercase;
-    color: var(--muted);
-    margin-bottom: 8px;
-    display: block;
-  }
+h1 em::after{
+  content:'';
+  position:absolute;bottom:-2px;left:0;right:0;
+  height:3px;background:var(--accent);border-radius:2px;
+  opacity:0.4;
+}
 
-  .input-row {
-    display: flex; gap: 8px; align-items: stretch;
-  }
+.sub{
+  font-size:15px;color:var(--muted);line-height:1.6;
+  animation:up 0.5s 0.07s cubic-bezier(0.22,1,0.36,1) both;
+}
 
-  input[type="text"], input[type="url"], input[type="number"] {
-    background: var(--surface2);
-    border: 1px solid var(--border2);
-    border-radius: 10px;
-    color: var(--text);
-    font-family: var(--mono);
-    font-size: 14px;
-    padding: 12px 16px;
-    outline: none;
-    transition: border-color 0.15s;
-    width: 100%;
-  }
+/* ── Card ── */
+.card{
+  background:var(--surface);
+  border:1.5px solid var(--border);
+  border-radius:var(--r-lg);
+  padding:22px;
+  box-shadow:var(--sh-card);
+  margin-bottom:12px;
+  animation:up 0.5s 0.12s cubic-bezier(0.22,1,0.36,1) both;
+}
 
-  input:focus { border-color: var(--accent); }
-  input::placeholder { color: var(--muted); }
+/* ── Input ── */
+.input-wrap{position:relative;}
 
-  .btn {
-    background: var(--accent);
-    color: #0a0a0a;
-    border: none;
-    border-radius: 10px;
-    font-family: var(--display);
-    font-size: 13px; font-weight: 700;
-    letter-spacing: 0.06em; text-transform: uppercase;
-    padding: 12px 24px;
-    cursor: pointer;
-    white-space: nowrap;
-    transition: background 0.15s, transform 0.1s;
-    flex-shrink: 0;
-  }
+.input-icon{
+  position:absolute;left:13px;top:50%;transform:translateY(-50%);
+  color:var(--muted);pointer-events:none;flex-shrink:0;
+}
 
-  .btn:hover { background: var(--accent2); }
-  .btn:active { transform: scale(0.97); }
-  .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+input[type=url],input[type=text],input[type=number]{
+  width:100%;
+  background:var(--surface2);
+  border:1.5px solid var(--border);
+  border-radius:var(--r);
+  color:var(--text);
+  font-family:var(--sans);
+  font-size:14px;
+  padding:13px 14px;
+  outline:none;
+  transition:border-color 0.15s,background 0.15s,box-shadow 0.15s;
+}
 
-  .btn-ghost {
-    background: transparent;
-    color: var(--muted);
-    border: 1px solid var(--border2);
-    font-size: 12px; padding: 8px 14px;
-  }
+input[type=url]{padding-left:40px;}
 
-  .btn-ghost:hover { color: var(--text); border-color: var(--border2); background: var(--surface2); }
+input:focus{
+  border-color:var(--accent);
+  background:var(--surface);
+  box-shadow:0 0 0 3px rgba(255,69,0,0.1);
+}
 
-  .options-row {
-    display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
-    margin-top: 16px;
-  }
+input::placeholder{color:var(--muted);}
 
-  .toggle-row {
-    display: flex; align-items: center; justify-content: space-between;
-    margin-top: 16px;
-    padding-top: 16px;
-    border-top: 1px solid var(--border);
-    cursor: pointer;
-  }
+.btn-row{display:flex;gap:9px;margin-top:10px;}
 
-  .toggle-label { font-size: 13px; color: var(--muted); }
+.btn{
+  flex:1;
+  background:var(--accent);color:#fff;
+  border:none;border-radius:var(--r);
+  font-family:var(--sans);font-size:14px;font-weight:700;
+  padding:13px 22px;
+  cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:7px;
+  transition:background 0.15s,transform 0.25s cubic-bezier(0.23,1,0.32,1),box-shadow 0.25s cubic-bezier(0.23,1,0.32,1);
+  box-shadow:0 2px 8px rgba(255,69,0,0.25);
+  will-change:transform;
+  position:relative;
+}
 
-  .toggle {
-    width: 36px; height: 20px;
-    background: var(--surface2);
-    border: 1px solid var(--border2);
-    border-radius: 99px;
-    position: relative;
-    transition: background 0.2s;
-    flex-shrink: 0;
-  }
+.btn:hover{background:var(--accent-h);box-shadow:0 4px 16px rgba(255,69,0,0.3);}
+.btn:active{transform:scale(0.98);}
+.btn:disabled{opacity:0.5;cursor:not-allowed;transform:none;box-shadow:none;}
 
-  .toggle.on { background: var(--accent); border-color: var(--accent); }
+.btn-sm{
+  flex:0;white-space:nowrap;
+  background:transparent;color:var(--muted);
+  border:1.5px solid var(--border);
+  font-family:var(--sans);font-size:13px;font-weight:500;
+  padding:0 16px;border-radius:var(--r);
+  cursor:pointer;
+  transition:all 0.15s;
+}
 
-  .toggle::after {
-    content: '';
-    position: absolute;
-    top: 2px; left: 2px;
-    width: 14px; height: 14px;
-    background: var(--muted);
-    border-radius: 50%;
-    transition: transform 0.2s, background 0.2s;
-  }
+.btn-sm:hover{color:var(--text);border-color:var(--border-hover);background:var(--surface2);}
 
-  .toggle.on::after { transform: translateX(16px); background: #0a0a0a; }
+/* ── Opt toggle ── */
+.opt-row{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-top:16px;padding-top:16px;
+  border-top:1px solid var(--border);
+  cursor:pointer;user-select:none;
+}
 
-  .result-card {
-    background: var(--surface);
-    border: 1px solid var(--accent);
-    border-radius: 16px;
-    padding: 20px 24px;
-    margin-bottom: 16px;
-    animation: fadeUp 0.35s ease both;
-    position: relative;
-    overflow: hidden;
-  }
+.opt-row:hover .opt-label{color:var(--text);}
+.opt-label{font-size:13px;color:var(--muted);transition:color 0.15s;}
 
-  .result-card::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0; height: 1px;
-    background: linear-gradient(90deg, transparent, var(--accent), transparent);
-    opacity: 0.5;
-  }
+.chevron{
+  color:var(--muted);
+  transition:transform 0.25s cubic-bezier(0.34,1.56,0.64,1);
+}
 
-  .result-label {
-    font-size: 11px; color: var(--muted);
-    letter-spacing: 0.1em; text-transform: uppercase;
-    margin-bottom: 8px;
-  }
+.chevron.open{transform:rotate(180deg);}
 
-  .result-url {
-    font-size: 22px; font-family: var(--display); font-weight: 700;
-    color: var(--accent);
-    letter-spacing: -0.01em;
-    word-break: break-all;
-    margin-bottom: 12px;
-  }
+.opts-grid{
+  display:grid;grid-template-columns:1fr 1fr;gap:12px;
+  margin-top:14px;
+}
 
-  .result-meta {
-    font-size: 12px; color: var(--muted);
-    display: flex; align-items: center; gap: 16px;
-    flex-wrap: wrap;
-  }
+.field-label{
+  display:block;
+  font-size:11px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;
+  color:var(--muted);margin-bottom:6px;
+}
 
-  .result-actions {
-    display: flex; gap: 8px; margin-top: 16px;
-  }
+/* ── Result ── */
+.result-card{
+  background:var(--surface);
+  border:1.5px solid var(--accent-bd);
+  border-radius:var(--r-lg);
+  padding:22px 24px;
+  margin-bottom:12px;
+  box-shadow:0 0 0 4px var(--accent-bg),var(--sh-card);
+  animation:stamp 0.45s cubic-bezier(0.34,1.56,0.64,1) both;
+  position:relative;overflow:hidden;
+}
 
-  .history-section { margin-top: 8px; }
+.result-card::before{
+  content:'';
+  position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent,var(--accent),transparent);
+  opacity:0.6;
+}
 
-  .history-title {
-    font-size: 11px; color: var(--muted);
-    letter-spacing: 0.12em; text-transform: uppercase;
-    margin-bottom: 12px;
-    display: flex; align-items: center; justify-content: space-between;
-  }
+.rl{
+  font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;
+  color:var(--muted);margin-bottom:7px;
+}
 
-  .history-item {
-    display: flex; align-items: center;
-    padding: 12px 16px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    margin-bottom: 8px;
-    gap: 12px;
-    transition: border-color 0.15s;
-    animation: fadeUp 0.3s ease both;
-  }
+.result-url{
+  font-family:var(--mono);
+  font-size:24px;font-weight:500;
+  color:var(--accent);
+  letter-spacing:-0.02em;word-break:break-all;
+  line-height:1.25;margin-bottom:6px;
+}
 
-  .history-item:hover { border-color: var(--border2); }
+.result-orig{
+  font-size:12px;color:var(--muted);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  margin-bottom:14px;
+}
 
-  .history-code {
-    font-size: 14px; font-weight: 500; color: var(--accent);
-    min-width: 80px;
-  }
+.result-meta{
+  display:flex;align-items:center;gap:8px;
+  margin-bottom:14px;flex-wrap:wrap;
+}
 
-  .history-orig {
-    font-size: 12px; color: var(--muted);
-    flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  }
+.badge-ttl{
+  display:inline-flex;align-items:center;gap:5px;
+  font-size:11px;font-weight:600;
+  background:var(--green-bg);color:var(--green);
+  border:1px solid var(--green-bd);
+  padding:4px 10px;border-radius:99px;
+}
 
-  .badge {
-    font-size: 10px; font-family: var(--display); font-weight: 700;
-    letter-spacing: 0.1em; text-transform: uppercase;
-    padding: 3px 8px; border-radius: 6px;
-  }
+.result-actions{display:flex;gap:8px;flex-wrap:wrap;}
 
-  .badge-ttl { background: rgba(200,240,96,0.12); color: var(--accent); }
+.btn-copy{
+  background:var(--accent);color:#fff;border:none;
+  font-family:var(--sans);font-size:13px;font-weight:700;
+  padding:9px 18px;border-radius:var(--r);
+  cursor:pointer;transition:background 0.15s,transform 0.1s;
+  display:flex;align-items:center;gap:6px;
+}
 
-  .toast {
-    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
-    background: var(--accent); color: #0a0a0a;
-    font-family: var(--display); font-size: 13px; font-weight: 700;
-    padding: 12px 20px; border-radius: 10px;
-    opacity: 0; pointer-events: none;
-    transition: opacity 0.2s, transform 0.2s;
-    z-index: 100; white-space: nowrap;
-  }
+.btn-copy:hover{background:var(--accent-h);}
+.btn-copy:active{transform:scale(0.97);}
+.btn-copy.copied{background:#15803D;}
 
-  .toast.show { opacity: 1; transform: translateX(-50%) translateY(-4px); }
+.btn-ghost{
+  background:transparent;color:var(--muted);
+  border:1.5px solid var(--border);
+  font-family:var(--sans);font-size:13px;font-weight:500;
+  padding:9px 14px;border-radius:var(--r);
+  cursor:pointer;transition:all 0.15s;
+  display:flex;align-items:center;gap:5px;
+}
 
-  .error-msg {
-    font-size: 12px; color: var(--danger);
-    margin-top: 8px; padding-left: 4px;
-    display: none;
-  }
+.btn-ghost:hover{color:var(--text);border-color:var(--border-hover);background:var(--surface2);}
 
-  .error-msg.show { display: block; }
+/* ── Stats inline ── */
+.stats-inline{
+  margin-top:14px;padding-top:14px;
+  border-top:1px solid var(--border);
+  display:none;
+}
 
-  .divider {
-    height: 1px; background: var(--border);
-    margin: 24px 0;
-  }
+.si-row{display:flex;align-items:center;gap:20px;}
 
-  .stat-row {
-    display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
-    margin-top: 12px;
-  }
+.si-num{
+  font-family:var(--mono);font-size:22px;font-weight:500;
+  color:var(--text);line-height:1;
+}
 
-  .stat-box {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 12px;
-    text-align: center;
-  }
+.si-lbl{font-size:11px;color:var(--muted);margin-top:2px;}
 
-  .stat-num {
-    font-family: var(--display); font-size: 22px; font-weight: 800;
-    color: var(--accent);
-  }
+/* ── Divider ── */
+.divider{height:1.5px;background:var(--border);margin:24px 0;}
 
-  .stat-lbl {
-    font-size: 10px; color: var(--muted);
-    letter-spacing: 0.1em; text-transform: uppercase;
-    margin-top: 2px;
-  }
+/* ── History ── */
+.hist-header{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:12px;
+}
+
+.hist-title{
+  font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;
+  color:var(--muted);
+}
+
+.btn-clear{
+  font-size:12px;font-weight:500;color:var(--muted);
+  background:none;border:none;cursor:pointer;
+  padding:4px 8px;border-radius:6px;
+  transition:all 0.15s;
+}
+
+.btn-clear:hover{background:var(--surface2);color:var(--danger);}
+
+.history-item{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 14px;
+  background:var(--surface);
+  border:1.5px solid var(--border);
+  border-radius:var(--r);
+  margin-bottom:7px;
+  transition:border-color 0.15s,transform 0.15s;
+  animation:up 0.3s cubic-bezier(0.22,1,0.36,1) both;
+}
+
+.history-item:hover{border-color:var(--border-hover);transform:translateX(2px);}
+
+.hi-code{
+  font-family:var(--mono);font-size:13px;font-weight:500;
+  color:var(--accent);min-width:72px;flex-shrink:0;
+}
+
+.hi-url{
+  font-size:12px;color:var(--muted);
+  flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+
+.hi-copy{
+  font-size:11px;font-weight:600;
+  background:var(--surface2);color:var(--muted);
+  border:1px solid var(--border);border-radius:6px;
+  padding:5px 10px;cursor:pointer;flex-shrink:0;
+  transition:all 0.15s;
+}
+
+.hi-copy:hover{background:var(--surface);color:var(--text);}
+
+/* ── Stats grid ── */
+.stats-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:8px;
+  margin-top:12px;
+}
+
+.stat-box{
+  background:var(--surface);
+  border:1.5px solid var(--border);
+  border-radius:var(--r);
+  padding:12px 14px;text-align:center;
+}
+
+.sb-num{
+  font-family:var(--mono);font-size:22px;font-weight:500;
+  color:var(--text);line-height:1;
+}
+
+.sb-lbl{
+  font-size:10px;font-weight:700;letter-spacing:0.09em;text-transform:uppercase;
+  color:var(--muted);margin-top:4px;
+}
+
+/* ── Error ── */
+.err{
+  font-size:12px;color:var(--danger);font-weight:500;
+  margin-top:7px;display:none;padding-left:2px;
+}
+
+.err.on{display:block;}
+
+/* ── Toast ── */
+.toast{
+  position:fixed;bottom:28px;left:50%;
+  transform:translateX(-50%) translateY(6px);
+  background:var(--text);color:var(--bg);
+  font-size:13px;font-weight:600;
+  padding:11px 20px;border-radius:10px;
+  opacity:0;pointer-events:none;z-index:500;white-space:nowrap;
+  transition:opacity 0.2s,transform 0.2s;
+  box-shadow:0 8px 30px rgba(0,0,0,0.2);
+}
+
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* ── Spinner ── */
+.spinner{
+  width:16px;height:16px;
+  border:2.5px solid rgba(255,255,255,0.3);
+  border-top-color:#fff;
+  border-radius:50%;
+  animation:spin 0.7s linear infinite;
+  display:none;
+}
+
+/* ── Animations ── */
+@keyframes up{
+  from{opacity:0;transform:translateY(14px)}
+  to{opacity:1;transform:translateY(0)}
+}
+
+@keyframes stamp{
+  from{opacity:0;transform:scale(0.93) translateY(10px)}
+  to{opacity:1;transform:scale(1) translateY(0)}
+}
+
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── Scissors anim on btn ── */
+@keyframes snip{
+  0%,100%{transform:rotate(0)}
+  25%{transform:rotate(-15deg)}
+  75%{transform:rotate(15deg)}
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--border-hover)}
+/* ── Cut animation ── */
+.cut-wrap{
+  position:absolute;inset:0;border-radius:var(--r);
+  display:flex;align-items:center;
+  padding:13px 14px 13px 40px;
+  background:var(--surface);
+  font-size:14px;font-family:var(--sans);color:var(--text);
+  pointer-events:none;z-index:5;overflow:hidden;white-space:nowrap;
+}
+
+.cut-left,.cut-right{
+  display:inline;
+  transition:transform 0.3s cubic-bezier(0.55,0,1,0.45),opacity 0.3s ease;
+}
+
+.cut-left.go{transform:translateX(-30px);opacity:0;}
+.cut-right.go{transform:translateX(30px);opacity:0;}
+
+.cut-scissors{
+  position:absolute;top:50%;transform:translateY(-50%);
+  font-size:17px;color:var(--accent);
+  transition:left 0.26s cubic-bezier(0.4,0,0.6,1),opacity 0.18s;
+  pointer-events:none;z-index:6;
+}
+
+/* ── Clipboard hint ── */
+.clip-hint{
+  font-size:11px;font-weight:600;color:var(--green);
+  display:none;align-items:center;gap:5px;
+  margin-top:6px;padding-left:2px;
+  animation:up 0.2s ease both;
+}
+
+/* ── QR panel ── */
+.qr-panel{
+  margin-top:14px;padding-top:14px;
+  border-top:1px solid var(--border);
+  display:none;
+  animation:up 0.25s ease both;
+}
+
+.qr-lbl{
+  font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;
+  color:var(--muted);margin-bottom:10px;
+}
+
+.qr-inner{display:flex;align-items:flex-start;gap:16px;}
+
+.qr-canvas-wrap{
+  background:#fff;border:1.5px solid var(--border);
+  border-radius:10px;padding:10px;flex-shrink:0;
+  line-height:0;
+}
+
+.qr-canvas-wrap canvas,.qr-canvas-wrap img{display:block;border-radius:3px;}
+
+.qr-side{
+  display:flex;flex-direction:column;gap:8px;
+  justify-content:center;padding-top:2px;
+}
+
+.qr-note{font-size:12px;color:var(--muted);line-height:1.5;max-width:200px;}
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 <body>
-<div class="grain"></div>
-<div class="wrap">
+<div class="noise"></div>
+<div class="page">
 
-  <div class="header">
-    <div class="logo"><div class="logo-dot"></div>snip.go</div>
-    <h1>Make URLs<br><span>shorter.</span></h1>
+  <!-- Nav -->
+  <nav>
+    <a class="logo" href="#">
+      <div class="logo-mark">✂</div>
+      snip.go
+    </a>
+    <div class="nav-right">
+      <span class="pill">URL shortener</span>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <div class="hero">
+    <h1>Long URLs,<br><em>gone.</em></h1>
+    <p class="sub">Paste any URL and get a clean short link in one click.</p>
   </div>
 
+  <!-- Main card -->
   <div class="card" id="main-card">
-    <label class="field-label" for="url-input">Long URL</label>
-    <div class="input-row">
-      <input type="url" id="url-input" placeholder="https://your-very-long-url.com/goes/here" />
-      <button class="btn" onclick="shortenURL()" id="shorten-btn">Snip →</button>
+    <div class="input-wrap">
+      <svg class="input-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/>
+        <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/>
+      </svg>
+      <input type="url" id="url-input" placeholder="https://your-very-long-url.com/paste/here" autocomplete="off"/>
     </div>
-    <div class="error-msg" id="url-error">Please enter a valid URL.</div>
-
-    <div class="toggle-row" onclick="toggleOptions()">
-      <span class="toggle-label">Advanced options</span>
-      <div class="toggle" id="opt-toggle"></div>
+    <div class="err" id="url-error">Please enter a valid URL (include https://)</div>
+    <div class="clip-hint" id="clip-hint">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      Pasted from clipboard
     </div>
 
-    <div id="options-panel" style="display:none; margin-top:16px;">
-      <div class="options-row">
+    <div class="btn-row">
+      <button class="btn" id="shorten-btn" onclick="shortenURL()">
+        <div class="spinner" id="spinner"></div>
+        <span id="btn-txt">Snip it ✂</span>
+      </button>
+    </div>
+
+    <div class="opt-row" onclick="toggleOpts()" role="button" tabindex="0"
+         onkeydown="if(event.key==='Enter')toggleOpts()">
+      <span class="opt-label">Advanced options</span>
+      <svg class="chevron" id="chevron" width="16" height="16" viewBox="0 0 24 24"
+           fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="6 9 12 15 18 9"/>
+      </svg>
+    </div>
+
+    <div id="opts" style="display:none">
+      <div class="opts-grid">
         <div>
           <label class="field-label" for="custom-code">Custom alias</label>
-          <input type="text" id="custom-code" placeholder="my-link" />
+          <input type="text" id="custom-code" placeholder="my-link"/>
         </div>
         <div>
-          <label class="field-label" for="ttl-days">Expires in (days)</label>
-          <input type="number" id="ttl-days" placeholder="Never" min="1" max="365" />
+          <label class="field-label" for="ttl">Expires in (days)</label>
+          <input type="number" id="ttl" placeholder="Never" min="1" max="365"/>
         </div>
       </div>
     </div>
   </div>
 
+  <!-- Result -->
   <div id="result-area"></div>
 
-  <div class="history-section" id="history-section" style="display:none">
+  <!-- History -->
+  <div id="history-section" style="display:none">
     <div class="divider"></div>
-    <div class="history-title">
-      <span>Recent links</span>
-      <button class="btn btn-ghost" onclick="clearHistory()">Clear</button>
+    <div class="hist-header">
+      <span class="hist-title">Recent links</span>
+      <button class="btn-clear" onclick="clearHistory()">Clear all</button>
     </div>
     <div id="history-list"></div>
-    <div class="stat-row" id="stat-row">
-      <div class="stat-box"><div class="stat-num" id="s-total">0</div><div class="stat-lbl">Links</div></div>
-      <div class="stat-box"><div class="stat-num" id="s-clicks">0</div><div class="stat-lbl">Total clicks</div></div>
-      <div class="stat-box"><div class="stat-num" id="s-expiring">0</div><div class="stat-lbl">Expiring</div></div>
+    <div class="stats-grid">
+      <div class="stat-box">
+        <div class="sb-num" id="s-total">0</div>
+        <div class="sb-lbl">Links</div>
+      </div>
+      <div class="stat-box">
+        <div class="sb-num" id="s-clicks">0</div>
+        <div class="sb-lbl">Clicks</div>
+      </div>
+      <div class="stat-box">
+        <div class="sb-num" id="s-expiring">0</div>
+        <div class="sb-lbl">Expiring</div>
+      </div>
     </div>
   </div>
 
@@ -381,154 +615,370 @@
 <div class="toast" id="toast"></div>
 
 <script>
-  const BASE = 'https://snip-go.onrender.com';
-  let history = JSON.parse(localStorage.getItem('snip_history') || '[]');
-  let optOpen = false;
+const BASE = 'https://snip-go.onrender.com';
+let hist = JSON.parse(localStorage.getItem('snip_history') || '[]');
+let optOpen = false;
 
-  function toggleOptions() {
-    optOpen = !optOpen;
-    document.getElementById('opt-toggle').classList.toggle('on', optOpen);
-    document.getElementById('options-panel').style.display = optOpen ? 'block' : 'none';
+function toggleOpts() {
+  optOpen = !optOpen;
+  document.getElementById('chevron').classList.toggle('open', optOpen);
+  const panel = document.getElementById('opts');
+  if (optOpen) {
+    panel.style.display = 'grid';
+    panel.style.gridTemplateColumns = '1fr 1fr';
+    panel.style.gap = '12px';
+    panel.style.marginTop = '14px';
+  } else {
+    panel.style.display = 'none';
   }
+}
 
-  function showToast(msg) {
-    const t = document.getElementById('toast');
-    t.textContent = msg;
-    t.classList.add('show');
-    setTimeout(() => t.classList.remove('show'), 2200);
-  }
+function toast(msg, dur = 2400) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('on');
+  setTimeout(() => el.classList.remove('on'), dur);
+}
 
-  function isValidURL(str) {
-    try { new URL(str); return true; } catch { return false; }
-  }
+function isURL(s) {
+  try { new URL(s); return true; } catch { return false; }
+}
 
-  async function shortenURL() {
-    const urlEl = document.getElementById('url-input');
-    const errEl = document.getElementById('url-error');
-    const btn = document.getElementById('shorten-btn');
-    const url = urlEl.value.trim();
-    const customCode = document.getElementById('custom-code').value.trim();
-    const ttl = parseInt(document.getElementById('ttl-days').value) || 0;
+async function shortenURL() {
+  const inp = document.getElementById('url-input');
+  const err = document.getElementById('url-error');
+  const btn = document.getElementById('shorten-btn');
+  const sp  = document.getElementById('spinner');
+  const txt = document.getElementById('btn-txt');
+  const url = inp.value.trim();
+  const code = document.getElementById('custom-code').value.trim();
+  const ttl  = parseInt(document.getElementById('ttl').value) || 0;
 
-    errEl.classList.remove('show');
-    if (!isValidURL(url)) { errEl.classList.add('show'); return; }
+  err.classList.remove('on');
+  if (!isURL(url)) { err.classList.add('on'); inp.focus(); return; }
 
-    btn.disabled = true;
-    btn.textContent = '...';
+  await playCutAnimation(url);
 
-    const body = { url };
-    if (customCode) body.custom_code = customCode;
-    if (ttl > 0) body.ttl_days = ttl;
+  btn.disabled = true;
+  sp.style.display = 'block';
+  txt.textContent = 'Snipping…';
 
-    try {
-      const res = await fetch(`${BASE}/api/shorten`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
+  const body = { url };
+  if (code) body.custom_code = code;
+  if (ttl > 0) body.ttl_days = ttl;
 
-      if (!res.ok) {
-        const err = await res.json();
-        showToast('Error: ' + (err.error || 'Something went wrong'));
-        return;
-      }
+  try {
+    const res = await fetch(`${BASE}/api/shorten`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
 
-      const data = await res.json();
-      renderResult(data);
-
-      const item = { code: data.code, short: data.short_url, original: data.original_url, ttl: ttl, clicks: 0, ts: Date.now() };
-      history.unshift(item);
-      if (history.length > 20) history = history.slice(0, 20);
-      localStorage.setItem('snip_history', JSON.stringify(history));
-      renderHistory();
-
-      urlEl.value = '';
-      document.getElementById('custom-code').value = '';
-      document.getElementById('ttl-days').value = '';
-    } catch (e) {
-      showToast('Cannot reach server. Is it running?');
-    } finally {
-      btn.disabled = false;
-      btn.textContent = 'Snip →';
+    if (!res.ok) {
+      const e = await res.json().catch(() => ({}));
+      toast('Error: ' + (e.error || 'Something went wrong'));
+      return;
     }
-  }
 
-  function renderResult(data) {
-    const area = document.getElementById('result-area');
-    const ttlBadge = data.expires_in > 0 ? `<span class="badge badge-ttl">expires in ${data.expires_in}d</span>` : '';
-    area.innerHTML = `
-      <div class="result-card">
-        <div class="result-label">Your short URL</div>
-        <div class="result-url">${data.short_url}</div>
-        <div class="result-meta">
-          <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:320px">${data.original_url}</span>
-          ${ttlBadge}
+    const data = await res.json();
+    renderResult(data);
+
+    hist.unshift({
+      code: data.code,
+      short: data.short_url,
+      original: data.original_url,
+      ttl, clicks: 0, ts: Date.now(),
+    });
+    if (hist.length > 20) hist = hist.slice(0, 20);
+    localStorage.setItem('snip_history', JSON.stringify(hist));
+    renderHistory();
+
+    inp.value = '';
+    document.getElementById('custom-code').value = '';
+    document.getElementById('ttl').value = '';
+
+  } catch (e) {
+    toast('Cannot reach server. Is it running?');
+  } finally {
+    btn.disabled = false;
+    sp.style.display = 'none';
+    txt.textContent = 'Snip it ✂';
+  }
+}
+
+function renderResult(data) {
+  const area = document.getElementById('result-area');
+  const ttlBadge = data.expires_in > 0
+    ? `<span class="badge-ttl"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Expires in ${data.expires_in}d</span>`
+    : '';
+
+  area.innerHTML = `
+    <div class="result-card" id="rc-${data.code}">
+      <div class="rl">Your short URL</div>
+      <div class="result-url" id="ru-${data.code}"></div>
+      <div class="result-meta">
+        <div class="result-orig" title="${data.original_url}">${data.original_url}</div>
+        ${ttlBadge}
+      </div>
+      <div class="result-actions">
+        <button class="btn-copy" id="cp-${data.code}" onclick="copyURL('${data.short_url}','${data.code}')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+          Copy link
+        </button>
+        <button class="btn-ghost" onclick="fetchStats('${data.code}')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+          Stats
+        </button>
+        <button class="btn-ghost" id="qrbtn-${data.code}" onclick="toggleQR('${data.code}','${data.short_url}')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="3" height="3"/></svg>
+          QR
+        </button>
+        <button class="btn-ghost" onclick="window.open('${data.short_url}','_blank')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          Open
+        </button>
+      </div>
+      <div class="stats-inline" id="si-${data.code}"></div>
+      <div class="qr-panel" id="qr-${data.code}">
+        <div class="qr-lbl">Scan to open</div>
+        <div class="qr-inner">
+          <div class="qr-canvas-wrap" id="qrc-${data.code}"></div>
+          <div class="qr-side">
+            <div class="qr-note">Scan with any camera app to open the short link directly.</div>
+            <button class="btn-ghost" onclick="downloadQR('${data.code}')">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Download PNG
+            </button>
+          </div>
         </div>
-        <div class="result-actions">
-          <button class="btn" onclick="copyURL('${data.short_url}')">Copy link</button>
-          <button class="btn btn-ghost" onclick="fetchStats('${data.code}')">Stats</button>
-          <button class="btn btn-ghost" onclick="window.open('${data.short_url}', '_blank')">Open ↗</button>
+      </div>
+    </div>
+  `;
+
+  typewriterReveal('ru-' + data.code, data.short_url);
+}
+
+async function fetchStats(code) {
+  const el = document.getElementById('si-' + code);
+  if (el.style.display === 'block') { el.style.display = 'none'; return; }
+  try {
+    const res = await fetch(`${BASE}/api/stats/${code}`);
+    if (!res.ok) { toast('Stats not found'); return; }
+    const d = await res.json();
+    el.innerHTML = `
+      <div class="si-row">
+        <div>
+          <div class="si-num">${d.clicks}</div>
+          <div class="si-lbl">Total clicks</div>
         </div>
-        <div id="stats-${data.code}" style="display:none;margin-top:16px;"></div>
+        <div style="flex:1;font-size:12px;color:var(--muted);align-self:flex-end;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+          ${d.original_url}
+        </div>
       </div>
     `;
-  }
+    el.style.display = 'block';
+  } catch { toast('Cannot reach server'); }
+}
 
-  async function fetchStats(code) {
-    const el = document.getElementById('stats-' + code);
-    if (el.style.display === 'block') { el.style.display = 'none'; return; }
-    try {
-      const res = await fetch(`${BASE}/api/stats/${code}`);
-      if (!res.ok) { showToast('Stats not found'); return; }
-      const d = await res.json();
-      el.innerHTML = `
-        <div style="border-top:1px solid var(--border);padding-top:12px;display:flex;gap:20px;">
-          <div>
-            <div style="font-size:24px;font-family:var(--display);font-weight:800;color:var(--accent)">${d.clicks}</div>
-            <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em">Clicks</div>
-          </div>
-          <div style="flex:1;font-size:12px;color:var(--muted);align-self:flex-end;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.original_url}</div>
-        </div>`;
-      el.style.display = 'block';
-    } catch {
-      showToast('Cannot reach server');
+function copyURL(url, code) {
+  navigator.clipboard.writeText(url).then(() => {
+    toast('Copied to clipboard!');
+    const btn = document.getElementById('cp-' + code);
+    if (btn) {
+      btn.classList.add('copied');
+      btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Copied!`;
+      setTimeout(() => {
+        btn.classList.remove('copied');
+        btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg> Copy link`;
+      }, 2200);
     }
-  }
+  });
+}
 
-  function copyURL(url) {
-    navigator.clipboard.writeText(url).then(() => showToast('Copied to clipboard!'));
-  }
+function renderHistory() {
+  const list = document.getElementById('history-list');
+  const sec  = document.getElementById('history-section');
+  if (!hist.length) { sec.style.display = 'none'; return; }
+  sec.style.display = 'block';
+  list.innerHTML = hist.slice(0, 6).map((h, i) => `
+    <div class="history-item" style="animation-delay:${i * 0.04}s">
+      <div class="hi-code">${h.code}</div>
+      <div class="hi-url" title="${h.original}">${h.original}</div>
+      ${h.ttl > 0 ? `<span class="badge-ttl">${h.ttl}d</span>` : ''}
+      <button class="hi-copy" onclick="navigator.clipboard.writeText('${h.short}').then(()=>toast('Copied!'))">Copy</button>
+    </div>
+  `).join('');
+  document.getElementById('s-total').textContent = hist.length;
+  document.getElementById('s-clicks').textContent = hist.reduce((a, h) => a + h.clicks, 0);
+  document.getElementById('s-expiring').textContent = hist.filter(h => h.ttl > 0).length;
+}
 
-  function renderHistory() {
-    const list = document.getElementById('history-list');
-    const section = document.getElementById('history-section');
-    if (!history.length) { section.style.display = 'none'; return; }
-    section.style.display = 'block';
-    list.innerHTML = history.slice(0, 6).map((h, i) => `
-      <div class="history-item" style="animation-delay:${i * 0.04}s">
-        <div class="history-code">${h.code}</div>
-        <div class="history-orig" title="${h.original}">${h.original}</div>
-        ${h.ttl > 0 ? `<span class="badge badge-ttl">${h.ttl}d</span>` : ''}
-        <button class="btn btn-ghost" style="padding:6px 10px;font-size:11px" onclick="copyURL('${h.short}')">Copy</button>
-      </div>
-    `).join('');
-    document.getElementById('s-total').textContent = history.length;
-    document.getElementById('s-clicks').textContent = history.reduce((a, h) => a + h.clicks, 0);
-    document.getElementById('s-expiring').textContent = history.filter(h => h.ttl > 0).length;
-  }
+function clearHistory() {
+  hist = [];
+  localStorage.setItem('snip_history', '[]');
+  document.getElementById('history-section').style.display = 'none';
+  document.getElementById('result-area').innerHTML = '';
+  toast('History cleared');
+}
 
-  function clearHistory() {
-    history = [];
-    localStorage.setItem('snip_history', '[]');
-    document.getElementById('history-section').style.display = 'none';
-    document.getElementById('result-area').innerHTML = '';
-  }
+document.getElementById('url-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') shortenURL();
+});
 
-  document.getElementById('url-input').addEventListener('keydown', e => {
-    if (e.key === 'Enter') shortenURL();
+document.getElementById('url-input').addEventListener('focus', async () => {
+  const inp = document.getElementById('url-input');
+  if (inp.value.trim()) return;
+  try {
+    const text = (await navigator.clipboard.readText()).trim();
+    if (isURL(text)) {
+      inp.value = text;
+      const hint = document.getElementById('clip-hint');
+      hint.style.display = 'flex';
+      setTimeout(() => { hint.style.display = 'none'; }, 2600);
+    }
+  } catch { /* permission denied — fail silently */ }
+});
+
+function playCutAnimation(url) {
+  return new Promise(resolve => {
+    const wrap = document.querySelector('.input-wrap');
+    const inp  = document.getElementById('url-input');
+
+    const overlay = document.createElement('div');
+    overlay.className = 'cut-wrap';
+
+    const mid = Math.floor(url.length / 2);
+    const leftSpan = document.createElement('span');
+    leftSpan.className = 'cut-left';
+    leftSpan.textContent = url.slice(0, mid);
+
+    const rightSpan = document.createElement('span');
+    rightSpan.className = 'cut-right';
+    rightSpan.textContent = url.slice(mid);
+
+    overlay.appendChild(leftSpan);
+    overlay.appendChild(rightSpan);
+
+    const sciss = document.createElement('span');
+    sciss.className = 'cut-scissors';
+    sciss.textContent = '✂';
+    sciss.style.left = '38px';
+
+    inp.style.opacity = '0';
+    wrap.appendChild(overlay);
+    wrap.appendChild(sciss);
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const ow = overlay.getBoundingClientRect().width;
+        sciss.style.left = (ow / 2) + 'px';
+      });
+    });
+
+    setTimeout(() => {
+      leftSpan.classList.add('go');
+      rightSpan.classList.add('go');
+      sciss.style.opacity = '0';
+    }, 250);
+
+    setTimeout(() => {
+      overlay.remove();
+      sciss.remove();
+      inp.style.opacity = '';
+      resolve();
+    }, 560);
+  });
+}
+
+function typewriterReveal(elId, text) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  el.textContent = '';
+  const delay = Math.min(38, Math.floor(600 / text.length));
+  let i = 0;
+  const tick = () => {
+    if (i < text.length) {
+      el.textContent += text[i++];
+      setTimeout(tick, delay);
+    }
+  };
+  setTimeout(tick, 80);
+}
+
+function toggleQR(code, shortUrl) {
+  const panel = document.getElementById('qr-' + code);
+  const btn   = document.getElementById('qrbtn-' + code);
+  if (panel.style.display === 'block') {
+    panel.style.display = 'none';
+    btn && btn.classList.remove('btn-ghost-active');
+    return;
+  }
+  panel.style.display = 'block';
+  btn && btn.classList.add('btn-ghost-active');
+  if (panel.dataset.generated) return;
+  panel.dataset.generated = '1';
+  const wrap = document.getElementById('qrc-' + code);
+  new QRCode(wrap, {
+    text: shortUrl,
+    width: 118, height: 118,
+    colorDark: '#1C1917',
+    colorLight: '#FFFFFF',
+    correctLevel: QRCode.CorrectLevel.M,
+  });
+}
+
+function downloadQR(code) {
+  const wrap = document.getElementById('qrc-' + code);
+  if (!wrap) return;
+  const img    = wrap.querySelector('img');
+  const canvas = wrap.querySelector('canvas');
+  const src    = canvas ? canvas.toDataURL('image/png') : (img ? img.src : null);
+  if (!src) return;
+  const a = document.createElement('a');
+  a.href = src; a.download = `snip-${code}-qr.png`; a.click();
+}
+
+
+(function initMagnetic() {
+  const btn = document.getElementById('shorten-btn');
+  const STRENGTH = 0.42;
+  const RADIUS = 100;
+  let isDisabled = false;
+
+  const observer = new MutationObserver(() => {
+    isDisabled = btn.disabled;
+    if (isDisabled) btn.style.transform = '';
+  });
+  observer.observe(btn, { attributes: true, attributeFilter: ['disabled'] });
+
+  btn.addEventListener('mousemove', e => {
+    if (isDisabled) return;
+    const r = btn.getBoundingClientRect();
+    const cx = r.left + r.width / 2;
+    const cy = r.top + r.height / 2;
+    const dx = e.clientX - cx;
+    const dy = e.clientY - cy;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const pull = Math.max(0, 1 - dist / RADIUS);
+    const x = (dx * pull * STRENGTH).toFixed(2);
+    const y = (dy * pull * STRENGTH).toFixed(2);
+    const scale = (1 + pull * 0.05).toFixed(3);
+    btn.style.transform = `translate(${x}px,${y}px) scale(${scale})`;
+    btn.style.boxShadow = `0 ${4 + pull * 10}px ${16 + pull * 24}px rgba(255,69,0,${0.25 + pull * 0.2})`;
   });
 
-  renderHistory();
+  btn.addEventListener('mouseleave', () => {
+    if (isDisabled) return;
+    btn.style.transform = '';
+    btn.style.boxShadow = '';
+  });
+
+  btn.addEventListener('mousedown', () => {
+    btn.style.transform = 'scale(0.97)';
+  });
+})();
+
+renderHistory();
 </script>
 </body>
 </html>
